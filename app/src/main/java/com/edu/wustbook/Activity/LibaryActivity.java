@@ -221,8 +221,8 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
-            if (progressBar != null && progressBar.getVisibility() != View.GONE) {
-                return true;
+            if (st != null && st.getStatus() == AsyncTask.Status.RUNNING) {
+                st.cancel(true);
             }
             if (searchStr != null && !"".equals(searchStr)) {
                 return true;
