@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="FloatingBallFramelayout"></declare-styleable>
+
+    <attr name="FloatingBall">
+        <flag name="normal" value="0" />
+    </attr>
+
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <integer name="floating_action_button_animation_duration">60       </integer>
+    <integer name="fragment_animation_duration">1000</integer>
+    <integer name="_screenwith">-1280</integer>
+    <integer name="screenwith">1280</integer>
+
+</resources>

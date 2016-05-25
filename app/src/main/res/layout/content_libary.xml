@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context="com.edu.wustbook.Activity.LibaryActivity"
+    tools:showIn="@layout/activity_libary">
+    <FrameLayout
+        android:id="@+id/content_pushfragment"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent" />
+
+    <FrameLayout
+        android:id="@+id/content_searchfragment"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@id/content_pushfragment"
+        android:paddingLeft="5dp"
+        android:paddingRight="5dp"
+        android:visibility="invisible" />
+
+</RelativeLayout>
