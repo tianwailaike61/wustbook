@@ -2,7 +2,9 @@ package com.edu.wustbook.Model;
 
 import android.content.ContentValues;
 
-public class Book {
+import java.io.Serializable;
+
+public class Book implements Serializable {
     private int id;
     private int type = LIBARY;
     private int state = -1;
@@ -17,14 +19,12 @@ public class Book {
     private float price = -1;
 
 
-    public static final int LIBARY = 1;
-    public static final int BOOKSTORE = 2;
+    public static final int LIBARY = 100;
+    public static final int BOOKSTORE = 200;
 
-    public static final int UNABLE_TO_BORROW = 0;
-    public static final int ABLE_TO_BORROW = 1;
-
-    public static final int SALING = 2;
-    public static final int COMPLETE = 3;
+    public static final int SALING = 1;
+    public static final int COMPLETE = 0;
+    public static final int OUTOFTIME = -1;
 
 
     private String callNo; // 索书号
@@ -165,8 +165,14 @@ public class Book {
             values.put("url", url);
         if (iconPath != null)
             values.put("iconPath", iconPath);
-        if(docType !=null)
+        if (docType != null)
             values.put("docType", docType);
+        if (qq != null)
+            values.put("qq", qq);
+        if (saler != null)
+            values.put("saler", saler);
+        if (phoneNumber != null)
+            values.put("phoneNumber", phoneNumber);
         return values;
     }
 }

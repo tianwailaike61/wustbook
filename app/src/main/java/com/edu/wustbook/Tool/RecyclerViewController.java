@@ -17,27 +17,29 @@ public class RecyclerViewController implements SwipeRefreshLayout.OnRefreshListe
         void onPullUp();
 
         void onPullDown();
-
     }
 
     public RecyclerViewController(RecyclerView recyclerView, SwipeRefreshLayout swipeRefreshLayout) {
         this.recyclerView = recyclerView;
-        this.swipeRefreshLayout = swipeRefreshLayout;
-        recyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
+
+        this.recyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
                 super.onScrolled(recyclerView, dx, dy);
                 LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
                 int lastVisibleItem = layoutManager.findLastVisibleItemPosition();
                 int totalItemCount = layoutManager.getItemCount();
-                //lastVisibleItem>=totalItemCount-2 剩下2个item自动加载
+                //lastVisibleItem>=totalItemCount-4 剩下4个item自动加载
                 //dy>0 向下滑动
-                if (lastVisibleItem >= totalItemCount - 2 && dy > 0) {
+                if (lastVisibleItem >= totalItemCount - 4 && dy > 0) {
                     if (!isLoadingMore && listener != null)
                         listener.onPullUp();
                 }
             }
         });
+
+        this.swipeRefreshLayout = swipeRefreshLayout;
+        this.swipeRefreshLayout.setOnRefreshListener(this);
     }
 
     public void setLoadingMore(boolean loadingMore) {
@@ -46,6 +48,7 @@ public class RecyclerViewController implements SwipeRefreshLayout.OnRefreshListe
 
     public void setRefreshing(boolean refreshing) {
         isRefreshing = refreshing;
+        swipeRefreshLayout.setRefreshing(refreshing);
     }
 
     public void setListener(SrollListener listener) {

@@ -21,7 +21,7 @@ public class DBhelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         String sql = "CREATE TABLE " + booktable + " (id INTEGER primary key autoincrement, name varchar(255), " +
                 "author varchar(255),publisher varchar(255),url varchar(255),type INTEGER,callNo varchar(255),docType varchar(100)," +
-                "price float,icoPath varchar(255),state INTEGER);";
+                "price float,icoPath varchar(255),state INTEGER,saler varchar(255),qq varchar(10),phoneNumber varchar(12));";
         db.execSQL(sql);
     }
 

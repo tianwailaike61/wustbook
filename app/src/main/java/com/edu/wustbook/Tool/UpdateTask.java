@@ -6,14 +6,10 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.edu.wustbook.Model.Book;
-
-import java.util.List;
-
 /**
  * Created by PC on 2016/5/25.
  */
-public class UploadTask extends AsyncTask<ContentValues, Integer, Boolean> {
+public class UpdateTask extends AsyncTask<ContentValues, Integer, Boolean> {
     private String urlStr;
     private String cookie;
 
@@ -21,7 +17,7 @@ public class UploadTask extends AsyncTask<ContentValues, Integer, Boolean> {
 
     private HttpConnection httpConnection;
 
-    public UploadTask(String url, Handler handler) {
+    public UpdateTask(String url, Handler handler) {
         this.urlStr = url;
         this.handler = handler;
     }
@@ -56,6 +52,7 @@ public class UploadTask extends AsyncTask<ContentValues, Integer, Boolean> {
         Message message = Message.obtain();
         message.what = httpConnection.getConnState();
         message.obj = aBoolean;
+        message.arg1=1;
         handler.sendMessage(message);
         httpConnection.close();
     }

@@ -221,9 +221,12 @@ public class MyLibaryActivity extends AppCompatActivity {
 
         @Override
         public void onItemClick(View view, int postion) {
-            Intent intent = new Intent(getApplicationContext(), BookDetailActivity.class);
-            intent.putExtra("type", "libary");
-            intent.putExtra("url", getString(R.string.libaryBaseUrl) + books.get(postion).getUrl());
+            Intent intent = new Intent(MyLibaryActivity.this, BookDetailActivity.class);
+            Book book= books.get(postion);
+            book.setUrl(getString(R.string.libaryBaseUrl) + books.get(postion).getUrl());
+            Bundle bundle = new Bundle();
+            bundle.putSerializable("book", book);
+            intent.putExtras(bundle);
             startActivity(intent);
         }
 

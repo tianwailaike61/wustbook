@@ -1,18 +1,27 @@
 package com.edu.wustbook.Fragment;
 
 import android.app.Fragment;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.widget.AppCompatButton;
+import android.support.v7.widget.AppCompatImageButton;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.edu.wustbook.Activity.BookDetailActivity;
@@ -30,10 +39,17 @@ import java.util.List;
 import java.util.Map;
 
 public class BookStoreFragment extends Fragment implements
-        ItemClickListener, RecyclerViewController.SrollListener {
+        ItemClickListener, RecyclerViewController.SrollListener, View.OnClickListener {
     private RecyclerView booklist;
     private SwipeRefreshLayout refreshLayout;
+    private EditText searchStr;
+    private AppCompatImageButton back, clear;
+
     private Context context;
+
+    private int state = NORMAL;
+    private final static int NORMAL = 1;
+    private final static int SEARCH = 0;
 
     private RecyclerViewAdapter adapter;
 
@@ -44,24 +60,51 @@ public class BookStoreFragment extends Fragment implements
     private SearchTask st;
 
     private List<Book> books = new ArrayList<>();
+    private List<Book> searchBooks = new ArrayList<>();
+
+    private TextWatcher textWatcher = new TextWatcher() {
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+            if (state == NORMAL)
+                changeState();
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+            if (s != null && !TextUtils.isEmpty(s)) {
+                loadMoreData();
+                searchBooks.clear();
+                adapter.deleteAllDate();
+            }
+        }
+    };
 
     private Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
+            controller.setRefreshing(false);
             switch (msg.what) {
                 case HttpConnection.RESPONSE:
-                    books = (List<Book>) msg.obj;
-                    setData(books);
-                    setRefreshing(false);
+                    if (state == SEARCH) {
+                        searchBooks = (List<Book>) msg.obj;
+                    } else {
+                        books = (List<Book>) msg.obj;
+                    }
+                    setData((List<Book>) msg.obj);
                     break;
                 case HttpConnection.Exception:
-                    setRefreshing(false);
-                    Toast.makeText(getActivity(), getResources().getString(R.string.network_excetption), Toast.LENGTH_LONG).show();
+                    if (BookStoreFragment.this.isAdded())
+                        Toast.makeText(getActivity(), getResources().getString(R.string.network_excetption), Toast.LENGTH_SHORT).show();
                     break;
                 case HttpConnection.NORESPONSE:
-                    setRefreshing(false);
-                    Toast.makeText(getActivity(), getResources().getString(R.string.network_no_response), Toast.LENGTH_LONG).show();
+                    if (BookStoreFragment.this.isAdded())
+                        Toast.makeText(getActivity(), getResources().getString(R.string.network_no_response), Toast.LENGTH_SHORT).show();
                     break;
                 default:
 
@@ -69,16 +112,11 @@ public class BookStoreFragment extends Fragment implements
         }
     };
 
-    public interface MenuButtonClick extends View.OnClickListener {
-        @Override
-        void onClick(View v);
-    }
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         parent = inflater.inflate(R.layout.fragment_bookstore, container, false);
         init();
-        loadData();
+        loadMoreData();
         return parent;
     }
 
@@ -94,12 +132,25 @@ public class BookStoreFragment extends Fragment implements
         refreshLayout = (SwipeRefreshLayout) parent.findViewById(R.id.refreshlayout);
         controller = new RecyclerViewController(booklist, refreshLayout);
         controller.setListener(this);
+
+        searchStr = (EditText) parent.findViewById(R.id.searchtext);
+        searchStr.addTextChangedListener(textWatcher);
+        back = (AppCompatImageButton) parent.findViewById(R.id.back);
+        back.setOnClickListener(this);
+        clear = (AppCompatImageButton) parent.findViewById(R.id.clear_input);
+        clear.setOnClickListener(this);
     }
 
-    private void loadData() {
+    private void loadMoreData() {
         st = new SearchTask(getString(R.string.bookstoreUrl) + "SearchBooksServlet", SearchTask.BOOKSTORE, handler);
-        st.execute();
-        setRefreshing(true);
+        if (state == NORMAL)
+            st.execute();
+        if (state == SEARCH) {
+            ContentValues values = new ContentValues();
+            values.put("Bname", searchStr.getText().toString());
+            st.execute();
+        }
+        controller.setRefreshing(true);
     }
 
     private void setData(List<Book> newBooks) {
@@ -118,26 +169,6 @@ public class BookStoreFragment extends Fragment implements
         books.addAll(newBooks);
     }
 
-    private void setRefreshing(boolean isRefreshing) {
-        refreshLayout.setRefreshing(isRefreshing);
-        if (!isRefreshing)
-            refreshLayout.setEnabled(isRefreshing);
-    }
-
-    private void loadMore(List<Book> newBooks) {
-        List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
-        for (Book book : newBooks) {
-            Map<String, Object> map = new HashMap<String, Object>();
-            //map.put("bookcover", IMGUtils.getPicture(context, R.drawable.ic_menu_share));
-            map.put("bookname", "书名:" + book.getName());
-            map.put("bookauthor", "出售者:" + book.getSaler());
-            map.put("bookprice", "售价:" + book.getPrice());
-            map.put("flag", "bookstore");
-            data.add(map);
-        }
-        adapter.insertData(data);
-        books.addAll(newBooks);
-    }
 
     @Override
     public void onPullUp() {
@@ -146,13 +177,65 @@ public class BookStoreFragment extends Fragment implements
 
     @Override
     public void onPullDown() {
+        if (state == NORMAL) {
+            books.clear();
+            adapter.deleteAllDate();
+            loadMoreData();
+        } else {
+            if (!TextUtils.isEmpty(searchStr.getText())) {
+                books.clear();
+                adapter.deleteAllDate();
+                loadMoreData();
+            } else
+                controller.setRefreshing(false);
+        }
+    }
 
+    private void clearSearch() {
+        searchStr.setText("");
+        searchBooks.clear();
+        adapter.deleteAllDate();
+    }
+
+    private void changeState() {
+        if (state == NORMAL) {
+            state = SEARCH;
+            books.clear();
+            searchBooks.clear();
+            adapter.deleteAllDate();
+        } else {
+            state = NORMAL;
+            books.clear();
+            adapter.deleteAllDate();
+            loadMoreData();
+        }
+    }
+
+    @Override
+    public void onClick(View v) {
+        if (state == SEARCH) {
+            if (st != null && st.getStatus() == AsyncTask.Status.RUNNING)
+                st.cancel(true);
+            switch (v.getId()) {
+                case R.id.back:
+                    searchStr.setText("");
+                    changeState();
+                    break;
+                case R.id.clear_input:
+                    clearSearch();
+                    break;
+                default:
+            }
+        }
     }
 
     @Override
     public void onItemClick(View view, int postion) {
         Intent intent = new Intent(getActivity(), BookDetailActivity.class);
         intent.putExtra("type", "bookstore");
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("book", books.get(postion));
+        intent.putExtras(bundle);
         startActivity(intent);
     }
 

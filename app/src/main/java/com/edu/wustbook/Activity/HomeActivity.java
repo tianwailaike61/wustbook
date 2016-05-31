@@ -1,19 +1,21 @@
 package com.edu.wustbook.Activity;
 
 import android.content.Intent;
-import android.support.design.widget.CoordinatorLayout;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.CardView;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 
 import com.edu.wustbook.R;
 import com.edu.wustbook.Tool.BindView;
 import com.edu.wustbook.Tool.ViewUtils;
 
-public class HomeActivity extends AppCompatActivity implements View.OnClickListener {
-    @BindView(values = {R.id.libary, R.id.bookstore, R.id.collection, R.id.setting})
-    private CardView libary, bookstore, collection, setting;
+import de.hdodenhof.circleimageview.CircleImageView;
+
+public class HomeActivity extends AppCompatActivity
+        implements View.OnClickListener {
+    @BindView(values = {R.id.libary, R.id.bookstore, R.id.collection})
+    private CircleImageView libary, bookstore, collection;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,12 +25,13 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
         addListener();
     }
 
+
     private void addListener() {
         libary.setOnClickListener(this);
         bookstore.setOnClickListener(this);
         collection.setOnClickListener(this);
-        setting.setOnClickListener(this);
     }
+
 
     @Override
     public void onClick(View v) {
@@ -42,9 +45,6 @@ public class HomeActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.collection:
                 intent.setClass(HomeActivity.this, CollectionActivity.class);
-                break;
-            case R.id.setting:
-
                 break;
             default:
         }

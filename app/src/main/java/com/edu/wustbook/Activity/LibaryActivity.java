@@ -16,10 +16,12 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatEditText;
 import android.support.v7.widget.AppCompatImageButton;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -32,22 +34,19 @@ import android.view.ViewGroup;
 import android.view.ViewPropertyAnimator;
 import android.view.animation.LinearInterpolator;
 import android.widget.FrameLayout;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.edu.wustbook.R;
 import com.edu.wustbook.Tool.AnimUtils;
 import com.edu.wustbook.Tool.BindView;
-import com.edu.wustbook.Tool.FloatingBallFrameLayout;
 import com.edu.wustbook.Tool.HttpConnection;
-import com.edu.wustbook.Tool.RecyclerViewController;
 import com.edu.wustbook.Tool.ScreenUtils;
 import com.edu.wustbook.Tool.SearchTask;
 import com.edu.wustbook.Tool.ViewUtils;
-import com.edu.wustbook.View.FloatingBall;
 import com.edu.wustbook.Model.Book;
 import com.edu.wustbook.Model.ItemClickListener;
 import com.edu.wustbook.Model.RecyclerViewAdapter;
+import com.owater.library.CircleTextView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -221,10 +220,15 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
-            if (st != null && st.getStatus() == AsyncTask.Status.RUNNING) {
+//            if (progressBar!=null&&progressBar.getVisibility()==View.VISIBLE) {
+//                return true;
+//            }
+            if (st != null && st.getStatus() == AsyncTask.Status.RUNNING)
                 st.cancel(true);
-            }
             if (searchStr != null && !"".equals(searchStr)) {
+                searchFragment.search_content.setText("");
+                searchStr="";
+                searchFragment.clear();
                 return true;
             }
             if (searchFragment == null || searchFragment.isHidden()) {
@@ -238,16 +242,19 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
         return super.onKeyDown(keyCode, event);
     }
 
-    class PushFragment extends Fragment implements FloatingBallFrameLayout.CenterBallFunction {
+    class PushFragment extends Fragment implements View.OnClickListener {
 
         private View view;
         private FrameLayout parent;
+
+        private View[] views;
+        private int[] ids = {R.id.centerball, R.id.view, R.id.view2, R.id.view3, R.id.view4};
 
         // private SwipeRefreshLayout refreshLayout;
 
         private List<Book> books;
 
-        private FloatingBallFrameLayout floatingBallFrameLayout;
+        private View floatingBallFrameLayout;
         private Handler handler = new Handler() {
             @Override
             public void handleMessage(Message msg) {
@@ -262,11 +269,13 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
                         break;
                     case HttpConnection.Exception:
                         progressBar.setVisibility(View.GONE);
-                        Toast.makeText(getApplicationContext(), getResources().getString(R.string.network_excetption), Toast.LENGTH_LONG).show();
+                        if (PushFragment.this.isAdded())
+                            Toast.makeText(getApplicationContext(), getResources().getString(R.string.network_excetption), Toast.LENGTH_LONG).show();
                         break;
                     case HttpConnection.NORESPONSE:
                         progressBar.setVisibility(View.GONE);
-                        Toast.makeText(getApplicationContext(), getResources().getString(R.string.network_no_response), Toast.LENGTH_LONG).show();
+                        if (PushFragment.this.isAdded())
+                            Toast.makeText(getApplicationContext(), getResources().getString(R.string.network_no_response), Toast.LENGTH_LONG).show();
                         break;
                     default:
                 }
@@ -278,9 +287,15 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
             parent = (FrameLayout) findViewById(R.id.content_pushfragment);
             view = inflater.inflate(R.layout.fragment_push, container, false);
             parent.addView(view);
-            floatingBallFrameLayout = (FloatingBallFrameLayout) view.findViewById(R.id.floatingballframelayout);
+            floatingBallFrameLayout = view.findViewById(R.id.floatingballframelayout);
 //            refreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.refreshlayout);
 //            refreshLayout.setOnRefreshListener(this);
+            views = new View[ids.length];
+            for (int i = 0; i < ids.length; i++) {
+                views[i] = view.findViewById(ids[i]);
+                views[i].setOnClickListener(this);
+            }
+
             progressBar = view.findViewById(R.id.progressbar_layout);
             startPush();
             return parent;
@@ -292,50 +307,26 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
             st.execute();
 //            refreshLayout.setVisibility(View.VISIBLE);
 //            refreshLayout.setRefreshing(true);
+            floatingBallFrameLayout.setVisibility(View.GONE);
             progressBar.setVisibility(View.VISIBLE);
         }
 
         private void addBall() {
-            if (books != null) {
-                int k = -1;
-                for (int i = -1; i < 2; i = i + 2) {
-                    for (int j = -1; j < 2; j += 2) {
-                        FloatingBall ball = new FloatingBall(getActivity());
-                        ball.setBallCenter(floatingBallFrameLayout.getScreenCenter().getX() + i * 250,
-                                floatingBallFrameLayout.getScreenCenter().getY() + j * 250);
-                        ball.setRadius(100);
-                        ball.setTextSize(30);
-                        k++;
-                        final String name = books.get(k).getName();
-                        ball.setText(name);
-                        ball.setOnClickListener(new OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                if (searchFragment == null)
-                                    searchFragment = new SearchFragment();
-                                if (!searchFragment.isVisible()) {
-                                    searchFragment.search_content.setText(name);
-                                    moveFragment(UP);
-                                }
-                            }
-                        });
-                        ViewGroup.LayoutParams params = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                                ViewGroup.LayoutParams.WRAP_CONTENT);
-                        //ball.getLayoutParams();
-//                        params.width=200;
-//                        params.height=200;
-//                        ball.setLayoutParams(params);
-                        floatingBallFrameLayout.addView(ball, params);
-                    }
-                }
-                floatingBallFrameLayout.setCenterBall(null);
-                floatingBallFrameLayout.setFunction(this);
+            for (int i = 1; i < 5; i++) {
+                ((CircleTextView) views[i]).setText(books.get(i - 1).getName());
             }
         }
 
         @Override
         public void onClick(View v) {
-            startPush();
+            CircleTextView view = (CircleTextView) v;
+            if (view == views[0])
+                startPush();
+            else {
+                searchFragment.search_content.setText(view.getText());
+                moveFragment(UP);
+
+            }
         }
 
         @Override
@@ -348,7 +339,7 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
         }
     }
 
-    class SearchFragment extends Fragment implements Animator.AnimatorListener, ItemClickListener, SwipeRefreshLayout.OnRefreshListener {
+    class SearchFragment extends Fragment implements Animator.AnimatorListener, ItemClickListener {
         // @BindView(values = R.id.clear_input)
         private AppCompatImageButton clearInput;
 
@@ -371,7 +362,9 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
         private List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
 
         private boolean isLoadingMore;
+        private boolean isEnd;
         private int currentPage = 1;
+        private int pageSize = 0;
 
         private Handler hanler = new Handler() {
             @Override
@@ -379,6 +372,7 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
                 super.handleMessage(msg);
                 switch (msg.what) {
                     case HttpConnection.RESPONSE:
+                        pageSize = msg.arg1;
                         List<Book> newBooks = (List<Book>) msg.obj;
                         if (newBooks != null && newBooks.size() != 0) {
                             setData(newBooks);
@@ -410,7 +404,6 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
                     setRefreshing(false);
                     isLoadingMore = false;
                 }
-
             }
 
             @Override
@@ -419,10 +412,16 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
 
             @Override
             public void afterTextChanged(Editable s) {
-                if (s != null)
+                if (s != null) {
                     searchStr = s.toString();
-                currentPage = 0;
-                loadMore();
+                    clear();
+                    if (!TextUtils.isEmpty(searchStr)) {
+                        //currentPage = 0;
+                        loadMore();
+                    }
+                }
+
+
             }
         };
 
@@ -430,17 +429,13 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
             parent = (FrameLayout) findViewById(R.id.content_searchfragment);
             view = inflater.inflate(R.layout.fragment_search, container, false);
             init();
-            loadData();
             return view;
         }
 
         private void setRefreshing(boolean isRefreshing) {
             refreshLayout.setRefreshing(isRefreshing);
-        }
-
-        @Override
-        public void onRefresh() {
-
+            if (!isRefreshing)
+                refreshLayout.setEnabled(false);
         }
 
         @Override
@@ -454,7 +449,6 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
 
         public void init() {
             parent.addView(view);
-            // ViewUtils.autoInjectAllFiled(parent);
             parent.animate().setListener(this);
             emptyView = findViewById(R.id.maybeclosesearch);
             emptyView.setOnTouchListener(new View.OnTouchListener() {
@@ -484,35 +478,12 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
             recyclerView = (RecyclerView) parent.findViewById(R.id.search_list);
 
             refreshLayout = (SwipeRefreshLayout) parent.findViewById(R.id.refreshlayout);
-            refreshLayout.setOnRefreshListener(this);
+            refreshLayout.setEnabled(false);
+            initRecyclerview();
         }
 
         private void initSearchTask() {
             st = new SearchTask(getString(R.string.libarySearchUrl), SearchTask.LIBARY, hanler);
-        }
-
-        private void loadData() {
-            List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
-            adapter = new RecyclerViewAdapter(getActivity(), data);
-            adapter.setItemClickListener(this);
-            final LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
-            recyclerView.setLayoutManager(layoutManager);
-            recyclerView.setAdapter(adapter);
-            recyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
-                @Override
-                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                    int lastVisibleItem = layoutManager.findLastVisibleItemPosition();
-                    int totalItemCount = layoutManager.getItemCount();
-                    if (lastVisibleItem >= totalItemCount - 2 && dy > 0) {
-                        if (!isLoadingMore) {
-                            loadMore();
-                        }
-                    }
-                }
-            });
-
-            initSearchTask();
-
             params = new ContentValues();
             params.put("strSearchType", "title");
             params.put("match_flag", "forward");
@@ -527,21 +498,51 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
             params.put("page", 1);
         }
 
+        private void initRecyclerview() {
+            List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
+            adapter = new RecyclerViewAdapter(getActivity(), data);
+            adapter.setItemClickListener(this);
+            final LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
+            recyclerView.setLayoutManager(layoutManager);
+            recyclerView.setItemAnimator(new DefaultItemAnimator());
+            recyclerView.setAdapter(adapter);
+            recyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                    int lastVisibleItem = layoutManager.findLastVisibleItemPosition();
+                    int totalItemCount = layoutManager.getItemCount();
+                    if (lastVisibleItem >= totalItemCount - 2 && dy > 0) {
+                        if (!isLoadingMore && !isEnd) {
+                            loadMore();
+                        }
+                    }
+                }
+            });
+
+            initSearchTask();
+
+        }
+
         private void loadMore() {
             if (searchStr != null && !"".equals(searchStr)) {
-                isLoadingMore = true;
-                initSearchTask();
+                if (pageSize == 0 || currentPage < pageSize) {
+                    isLoadingMore = true;
+                    initSearchTask();
 
-                currentPage++;
-                params.put("strSearchType", "title");
-                params.put("strText", searchStr);
-                params.put("page", currentPage);
-                adapter.deleteAllDate();
-                //books.clear();
-                st.execute(params);
-                setRefreshing(true);
-            } else {
-                adapter.deleteAllDate();
+                    currentPage++;
+                    params.put("strSearchType", "title");
+                    params.put("strText", searchStr);
+                    params.put("page", currentPage);
+                    //adapter.deleteAllDate();
+                    //books.clear();
+                    st.execute(params);
+                    setRefreshing(true);
+                } else {
+                    isEnd = true;
+                    isLoadingMore = false;
+                    setRefreshing(false);
+                    Toast.makeText(getActivity(), getString(R.string.nomore), Toast.LENGTH_SHORT).show();
+                }
             }
         }
 
@@ -574,6 +575,9 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
             params.put("dept", "ALL");
             params.put("page", 1);
             st = null;
+            isEnd = false;
+            pageSize = 0;
+            books.clear();
             adapter.deleteAllDate();
         }
 
@@ -606,8 +610,11 @@ public class LibaryActivity extends AppCompatActivity implements View.OnTouchLis
         @Override
         public void onItemClick(View view, int postion) {
             Intent intent = new Intent(getActivity(), BookDetailActivity.class);
-            intent.putExtra("type", "libary");
-            intent.putExtra("url", getString(R.string.libaryBaseUrl) + books.get(postion).getUrl());
+            Book book = books.get(postion);
+            book.setUrl(getString(R.string.libaryBaseUrl) + books.get(postion).getUrl());
+            Bundle bundle = new Bundle();
+            bundle.putSerializable("book", book);
+            intent.putExtras(bundle);
             startActivity(intent);
         }
 

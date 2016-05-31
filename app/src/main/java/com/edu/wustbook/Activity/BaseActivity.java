@@ -19,6 +19,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.edu.wustbook.Fragment.BookStoreFragment;
@@ -36,6 +38,9 @@ public class BaseActivity extends AppCompatActivity
 
     private NavigationView navigationView;
 
+    private ImageView imageView;
+    private TextView username;
+
     private Fragment currentFragment, lastFragment, bookstoreFragment, mybookstoreFragment;
 
     private LandFragment mlandFragment;
@@ -43,6 +48,10 @@ public class BaseActivity extends AppCompatActivity
     private int checkedId;
 
     private static boolean island = false;
+    private int Uid;
+
+    private static String usernameStr;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,7 +60,7 @@ public class BaseActivity extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        final DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.setDrawerListener(toggle);
@@ -59,8 +68,27 @@ public class BaseActivity extends AppCompatActivity
 
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+
+        View v = navigationView.getHeaderView(0);
+        username = (TextView) v.findViewById(R.id.username);
+        imageView = (ImageView) v.findViewById(R.id.imageView);
+        imageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawer.closeDrawer(GravityCompat.START);
+                if (!island) {
+                    lastFragment = currentFragment;
+                    turnToFragment(getLandFragment());
+                }
+            }
+        });
         checkedId = R.id.nav_search;
         setDefaultFragment();
+
+        if (island) {
+            imageView.setImageResource(R.drawable.person);
+            BaseActivity.this.username.setText(usernameStr);
+        }
     }
 
     @Override
@@ -84,35 +112,35 @@ public class BaseActivity extends AppCompatActivity
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
-        if (!item.isChecked()) {
-            int id = item.getItemId();
-            switch (id) {
-                case R.id.nav_search:
-                    checkedId = R.id.nav_search;
-                    if (bookstoreFragment == null)
-                        bookstoreFragment = new BookStoreFragment();
-                    turnToFragment(bookstoreFragment);
-                    break;
-                case R.id.nav_mystore:
-                    checkedId = R.id.nav_mystore;
-                    if (island) {
-                        if (mybookstoreFragment == null)
-                            mybookstoreFragment = new MyBookStoreFragment();
-                        turnToFragment(mybookstoreFragment);
-                    } else {
-                        lastFragment = currentFragment;
-                        turnToFragment(getLandFragment());
-                    }
-                    break;
-                case R.id.nav_uploadbook:
-                    if (island) {
-                        Intent intent = new Intent(this, UploadBookActivity.class);
-                        startActivity(intent);
-                    } else {
-                        turnToFragment(getLandFragment());
-                    }
-                    break;
-            }
+        int id = item.getItemId();
+        switch (id) {
+            case R.id.nav_search:
+                checkedId = R.id.nav_search;
+                if (bookstoreFragment == null)
+                    bookstoreFragment = new BookStoreFragment();
+                turnToFragment(bookstoreFragment);
+                break;
+            case R.id.nav_mystore:
+                checkedId = R.id.nav_mystore;
+                if (mybookstoreFragment == null)
+                    mybookstoreFragment = new MyBookStoreFragment();
+                if (island) {
+                    turnToFragment(mybookstoreFragment);
+                } else {
+                    lastFragment = mybookstoreFragment;
+                    turnToFragment(getLandFragment());
+                }
+                break;
+            case R.id.nav_uploadbook:
+                if (island) {
+                    Intent intent = new Intent(this, UploadBookActivity.class);
+                    startActivity(intent);
+                } else {
+                    lastFragment = null;
+                    turnToFragment(getLandFragment());
+                }
+                break;
+
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -126,7 +154,16 @@ public class BaseActivity extends AppCompatActivity
         navigationView.setCheckedItem(checkedId);
     }
 
-//    private void showLandFragment() {
+    @Override
+    protected void onStop() {
+        super.onStop();
+        SharedPreferences sp = getSharedPreferences("bookstore", 0);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putInt("Uid", 0);
+        editor.commit();
+    }
+
+    //    private void showLandFragment() {
 //        FragmentManager mFragmentManager = getFragmentManager();
 //        FragmentTransaction mFragmentTransaction = mFragmentManager.beginTransaction();
 //        Fragment fragment = getLandFragment();
@@ -162,9 +199,9 @@ public class BaseActivity extends AppCompatActivity
 
                     values.put("Uname", getUsername());    //学号
                     values.put("password", getPassword());   //密码
-                    String []ss=getCookie().split(";");
-                    String []ss1=ss[0].split("=");
-                    values.put("cookie",ss1[1] );
+                    String[] ss = getCookie().split(";");
+                    String[] ss1 = ss[0].split("=");
+                    values.put("cookie", ss1[1]);
                 }
 
                 @Override
@@ -176,6 +213,7 @@ public class BaseActivity extends AppCompatActivity
 
                 @Override
                 public void loginSuccess(String cookie) {
+                    usernameStr = getUsername();
                     if (lastFragment != null) {
                         turnToFragment(lastFragment);
                         lastFragment = null;
@@ -185,6 +223,8 @@ public class BaseActivity extends AppCompatActivity
                     }
                     saveAccount();
                     island = true;
+                    imageView.setImageResource(R.drawable.person);
+                    BaseActivity.this.username.setText(usernameStr);
                 }
 
                 @Override
@@ -192,22 +232,24 @@ public class BaseActivity extends AppCompatActivity
                     if ("fail".equals(html)) {
                         return false;
                     }
-                    int Uid= JsonUtils.getUid(html);
-                    if (Uid!=-1)
+                    int uid = JsonUtils.getUid(html);
+                    if (uid != -1) {
+                        BaseActivity.this.Uid = uid;
                         return true;
+                    }
                     return false;
                 }
 
                 @Override
                 public void saveAccount() {
-                    if (isChanged) {
-                        SharedPreferences sp = getSharedPreferences("bookstore", 0);
-                        SharedPreferences.Editor editor = sp.edit();
-                        editor.putBoolean("remenbarAccount", isRemenbarAccount);
-                        editor.putString("username", getUsername());
-                        editor.putString("password", getPassword());
-                        editor.commit();
-                    }
+                    SharedPreferences sp = getSharedPreferences("bookstore", 0);
+                    SharedPreferences.Editor editor = sp.edit();
+                    editor.putBoolean("remenbarAccount", isRemenbarAccount);
+                    editor.putString("username", getUsername());
+                    editor.putString("password", getPassword());
+                    editor.putInt("Uid", BaseActivity.this.Uid);
+                    editor.commit();
+
                 }
             };
         }

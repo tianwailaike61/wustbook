@@ -21,21 +21,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="back"/>
+            android:text="@string/back" />
 
         <android.support.v7.widget.AppCompatButton
             android:id="@+id/web_forward"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="forward"
-            android:layout_weight="1"/>
+            android:layout_weight="1"
+            android:text="@string/forward" />
 
         <android.support.v7.widget.AppCompatButton
             android:id="@+id/web_close"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="close"/>
+            android:text="@string/close" />
     </LinearLayout>
 
     <WebView

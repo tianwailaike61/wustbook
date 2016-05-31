@@ -31,6 +31,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.edu.wustbook.Activity.BaseActivity;
 import com.edu.wustbook.Activity.BookDetailActivity;
 import com.edu.wustbook.Activity.MyLibaryActivity;
 import com.edu.wustbook.R;
@@ -69,6 +70,8 @@ public abstract class LandFragment extends Fragment {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
+            mProgressView.setVisibility(View.GONE);
+            mLoginFormView.setVisibility(View.VISIBLE);
             switch (msg.what) {
                 case HttpConnection.RESPONSE:
                     Map<String, Object> map = (Map<String, Object>) msg.obj;
@@ -79,8 +82,8 @@ public abstract class LandFragment extends Fragment {
                         Bitmap bitmap = (Bitmap) map.get("IMG");
                         if (bitmap != null)
                             mIdentifying_Code_ImageView.setBackground(IMGUtils.zoomBitmap(bitmap));
-                        else
-                            mIdentifying_Code_ImageView.setBackgroundResource(R.drawable.ic_menu_camera);
+//                        else
+//                            mIdentifying_Code_ImageView.setBackgroundResource(R.drawable.ic_menu_camera);
                     } else {
                         Object html = map.get("html");
                         if (html != null) {
@@ -193,7 +196,7 @@ public abstract class LandFragment extends Fragment {
                 mUsernameView.setText(sp.getString("username", ""));
                 mPasswordView.setText(sp.getString("password", ""));
             }
-        } else if (parentActivity instanceof BookDetailActivity) {
+        } else if (parentActivity instanceof BaseActivity) {
             SharedPreferences sp = getActivity().getSharedPreferences("bookstore", 0);
             if (sp.getBoolean("remenbarAccount", false)) {
                 remenbarAccount.setChecked(true);

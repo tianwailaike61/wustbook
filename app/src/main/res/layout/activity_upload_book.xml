@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
@@ -36,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginRight="1dp"
                 android:layout_weight="1"
-                android:text="提交" />
+                android:text="@string/action_submit" />
 
             <android.support.v7.widget.AppCompatButton
                 android:id="@+id/cancel"
@@ -44,7 +46,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="1dp"
                 android:layout_weight="1"
-                android:text="取消" />
+                android:text="@string/action_cancel" />
         </LinearLayout>
 
         <ScrollView
@@ -65,7 +67,7 @@
                         android:id="@+id/bookname"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="书名"
+                        android:hint="@string/bookname"
                         android:inputType="textAutoComplete"
                         android:maxLines="1"
                         android:singleLine="true" />
@@ -80,7 +82,7 @@
                         android:id="@+id/author"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="作者"
+                        android:hint="@string/bookauthor"
                         android:inputType="textAutoComplete"
                         android:maxLines="1"
                         android:singleLine="true" />
@@ -92,11 +94,11 @@
                     android:layout_height="wrap_content">
 
                     <EditText
-                        android:id="@+id/price"
+                        android:id="@+id/bookprice"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="售价"
-                        android:inputType="textAutoComplete"
+                        android:hint="@string/bookprice"
+                        android:inputType="number"
                         android:maxLines="1"
                         android:singleLine="true" />
 
@@ -110,7 +112,7 @@
                         android:id="@+id/saler"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="售卖人"
+                        android:hint="@string/saler"
                         android:inputType="textAutoComplete"
                         android:maxLines="1"
                         android:singleLine="true" />
@@ -125,8 +127,8 @@
                         android:id="@+id/phoneNumber"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="电话号码"
-                        android:inputType="textAutoComplete"
+                        android:hint="@string/phonenumbar"
+                        android:inputType="number"
                         android:maxLines="1"
                         android:singleLine="true" />
 
@@ -141,7 +143,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="QQ"
-                        android:inputType="textAutoComplete"
+                        android:inputType="number"
                         android:maxLines="1"
                         android:singleLine="true" />
 

@@ -13,9 +13,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.Nullable;
+import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatTextView;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,23 +45,29 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.w3c.dom.Text;
 
+import java.util.List;
 import java.util.Map;
 
 public class BookDetailActivity extends AppCompatActivity implements View.OnClickListener {
 
     @BindView(values = {R.id.fab1})
     private FloatingActionButton fab1;
+
+    //@BindView(values = {R.id.username})
+    private CollapsingToolbarLayout bookname;
+
     private Context context;
-
-    private String type;
-
-    private String url;
 
     public boolean collected = false;
 
     private final int[] ids = new int[]{R.id.text1, R.id.text2, R.id.text3, R.id.text4, R.id.text5, R.id.text6, R.id.text7};
     public TextView[] tvs = new TextView[ids.length];
+
+    private Book book;
+
+    private BookDBManager manager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,64 +86,92 @@ public class BookDetailActivity extends AppCompatActivity implements View.OnClic
 //            public void onClick(View view) {
 //            }
 //        });
-
+        manager = BookDBManager.getInstance(context);
         Intent intent = getIntent();
-        type = intent.getStringExtra("type");
-        FragmentManager fm = getFragmentManager();
-        FragmentTransaction transaction = fm.beginTransaction();
-        if ("libary".equals(type)) {
-            url = intent.getStringExtra("url");
+        book = (Book) intent.getSerializableExtra("book");
+//        if (intent.getBooleanExtra("collected", false)) {
+//            collected = true;
+//        } else
+            collected = search() == null ? false : true;
+        bookname = (CollapsingToolbarLayout) findViewById(R.id.toolbar_layout);
+        bookname.setTitle(book.getName());
+        FragmentTransaction transaction = getFragmentManager().beginTransaction();
+        if (Book.LIBARY == book.getType()) {
             libaryBookDetailFragment fragment = new libaryBookDetailFragment();
             transaction.add(R.id.bookcontent, fragment);
-            collected = intent.getBooleanExtra("collect", false);
-        } else if ("bookstore".equals(type)) {
+        } else if (Book.BOOKSTORE == book.getType()) {
             transaction.add(R.id.bookcontent, new storeBookDetailFragment());
         } else {
             Toast.makeText(getApplicationContext(), "error", Toast.LENGTH_LONG).show();
         }
         transaction.commit();
+        setButton();
     }
 
     @Override
     public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.fab1:
-                Book book = new Book();
-                if ("libary".equals(type)) {
-                    book.setUrl(url);
-                    String ss[] = tvs[0].getText().toString().split("\n");
-                    book.setAuthor(ss[1].replace("责任者:", ""));
-                    book.setName(ss[0].replace("题名:", ""));
-                    book.setPublisher(tvs[2].getText().toString());
-                    book.setType(Book.LIBARY);
-                } else {
-                    book.setUrl(url);
-                   // String ss = tvs[0].getText().toString();
-                    //book.setAuthor(ss.replace("责任者:", ""));
-                    book.setName(tvs[0].getText().toString().replace("书名:", ""));
-                    book.setSaler(tvs[1].getText().toString().replace("出售者:", ""));
-                    book.setPrice(Integer.parseInt(tvs[2].getText().toString().replace("售价:", "").replace("元", "")));
-                    book.setType(Book.BOOKSTORE);
-                }
-                BookDBManager manager = BookDBManager.getInstance(context);
-                if (!collected) {
-                    if (manager.insert(book)) {
-                        collected = true;
-                        fab1.setImageResource(R.drawable.collection);
-                        Toast.makeText(context, getString(R.string.addsuccess), Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(context, getString(R.string.addfail), Toast.LENGTH_LONG).show();
-                    }
-                } else {
-                    if (manager.delete(book)) {
-                        collected = false;
-                        fab1.setImageResource(R.drawable.uncollected);
-                        Toast.makeText(context, getString(R.string.deletesuccess), Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(context, getString(R.string.deletefail), Toast.LENGTH_LONG).show();
-                    }
-                }
-                break;
+        if (v == fab1) {
+            if (collected)
+                cancelCollect();
+            else
+                collect();
+        }
+    }
+
+    public Book search() {
+        List<Book> books = manager.search(book);
+        return books.size() == 0 ? null : books.get(0);
+    }
+
+    public void cancelCollect() {
+        if (manager.delete(manager.search(book).get(0).getId())) {
+            collected = false;
+            fab1.setImageResource(R.drawable.uncollected);
+            Toast.makeText(context, getString(R.string.deletesuccess), Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(context, getString(R.string.deletefail), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void collect() {
+        if (Book.LIBARY == book.getType()) {
+            //book.setUrl(url);
+            String ss[] = tvs[0].getText().toString().split("\n");
+            String author = ss[1].replace("责任者:", "");
+            book.setAuthor(TextUtils.isEmpty(author) ? null : author);
+            String name = ss[0].replace("题名:", "");
+            book.setName(TextUtils.isEmpty(name) ? null : name);
+            book.setPublisher(tvs[2].getText().toString());
+            book.setState(0);
+            book.setType(Book.LIBARY);
+        }
+        //else {
+        //book=(Book) getIntent().getParcelableExtra("book");
+        //book.setUrl(url);
+        // String ss = tvs[0].getText().toString();
+        //book.setAuthor(ss.replace("责任者:", ""));
+        // book.setName(tvs[0].getText().toString().replace("书名:", ""));
+        //book.setSaler(tvs[3].getText().toString().replace("出售者:", ""));
+        //Log.e("jhk","---"+tvs[2].getText().toString());
+        //float f=Float.parseFloat(tvs[2].getText().toString().replace("价格:", ""));
+        //int price = (int) f;
+        // book.setPrice(f);
+        //  book.setType(Book.BOOKSTORE);
+        //}
+        if (manager.insert(book)) {
+            collected = true;
+            fab1.setImageResource(R.drawable.collection);
+            Toast.makeText(context, getString(R.string.addsuccess), Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(context, getString(R.string.addfail), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void setButton() {
+        if (collected) {
+            fab1.setImageResource(R.drawable.collection);
+        } else {
+            fab1.setImageResource(R.drawable.uncollected);
         }
     }
 
@@ -148,6 +186,7 @@ public class BookDetailActivity extends AppCompatActivity implements View.OnClic
                 super.handleMessage(msg);
                 switch (msg.what) {
                     case HttpConnection.RESPONSE:
+
                         Map<String, Object> map = (Map<String, Object>) msg.obj;
                         if (msg.arg1 == 1) {
                             Bitmap bitmap = (Bitmap) map.get("IMG");
@@ -156,17 +195,21 @@ public class BookDetailActivity extends AppCompatActivity implements View.OnClic
 //                            else
 //                                bookcover.setBackgroundResource(R.drawable.ic_launcher);
                         } else {
+
                             Object html = map.get("html");
                             if (html != null) {
                                 loadData(html.toString().trim());
+                                fab1.setClickable(true);
                             }
                         }
                         // setButton();
                         break;
                     case HttpConnection.Exception:
+                        fab1.setClickable(false);
                         Toast.makeText(getActivity(), getResources().getString(R.string.network_excetption), Toast.LENGTH_LONG).show();
                         break;
                     case HttpConnection.NORESPONSE:
+                        fab1.setClickable(false);
                         Toast.makeText(getActivity(), getResources().getString(R.string.network_no_response), Toast.LENGTH_LONG).show();
                         break;
                     default:
@@ -181,17 +224,8 @@ public class BookDetailActivity extends AppCompatActivity implements View.OnClic
             View v = inflater.inflate(R.layout.fragment_libary_book_detail, container, false);
             initView(v);
             //setButton();
-            new BookDetailTask(url, handler).execute();
+            new BookDetailTask(book.getUrl(), handler).execute();
             return v;
-        }
-
-        public void setButton() {
-            fab1.setVisibility(View.VISIBLE);
-            if (collected) {
-                fab1.setImageResource(R.drawable.collection);
-            } else {
-                fab1.setImageResource(R.drawable.uncollected);
-            }
         }
 
         private void initView(View v) {
@@ -239,34 +273,36 @@ public class BookDetailActivity extends AppCompatActivity implements View.OnClic
         }
 
         private void getBookMessage(Document document) {
-            Elements elements = document.select("tr.whitetext");
-            tableLayout.setStretchAllColumns(true);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
-            for (Element element : elements) {
-                Elements elements1 = element.select("td");
-                final TableRow tableRow = new TableRow(getActivity());
-                TextView tv1 = new TextView(getActivity());
-                final String callNo = elements1.get(0).text().trim();
-                tv1.setText(callNo);
-                tableRow.addView(tv1);
-                TextView tv2 = new TextView(getActivity());
-                final String position = elements1.get(3).text().trim();
-                tv2.setText(position);
-                tableRow.addView(tv2);
-                TextView tv3 = new TextView(getActivity());
-                final String state = elements1.get(4).text().trim();
-                tv3.setText(state);
-                tableRow.addView(tv3);
-                tableRow.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-                        builder.setMessage("索书号:" + callNo + "\n馆藏地:" + position + "\n状态:" + state).create().show();
-                    }
-                });
-                tableLayout.addView(tableRow, new TableLayout.LayoutParams(
-                        TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT));
+            if (this.isAdded()) {
+                Elements elements = document.select("tr.whitetext");
+                tableLayout.setStretchAllColumns(true);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                for (Element element : elements) {
+                    Elements elements1 = element.select("td");
+                    final TableRow tableRow = new TableRow(getActivity());
+                    TextView tv1 = new TextView(getActivity());
+                    final String callNo = elements1.get(0).text().trim();
+                    tv1.setText(callNo);
+                    tableRow.addView(tv1);
+                    TextView tv2 = new TextView(getActivity());
+                    final String position = elements1.get(3).text().trim();
+                    tv2.setText(position);
+                    tableRow.addView(tv2);
+                    TextView tv3 = new TextView(getActivity());
+                    final String state = elements1.get(4).text().trim();
+                    tv3.setText(state);
+                    tableRow.addView(tv3);
+                    tableRow.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                            builder.setMessage(String.format(getResources().getString(R.string.libarybookdetail), callNo, position, state)).create().show();
+                        }
+                    });
+                    tableLayout.addView(tableRow, new TableLayout.LayoutParams(
+                            TableLayout.LayoutParams.MATCH_PARENT, TableLayout.LayoutParams.WRAP_CONTENT));
+                }
             }
         }
 
@@ -298,12 +334,23 @@ public class BookDetailActivity extends AppCompatActivity implements View.OnClic
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
             View v = inflater.inflate(R.layout.fragment_bookstore_book_detail, container, false);
-            for(int i=0;i<7;i++){
-                tvs[i]= (TextView) v.findViewById(ids[i]);
-                tvs[i].setText("11111");
+            for (int i = 0; i < 6; i++) {
+                tvs[i] = (TextView) v.findViewById(ids[i]);
             }
-            Intent intent=getIntent();
+            Book book = (Book) getIntent().getSerializableExtra("book");
+            tvs[0].setText("书名:" + getString(book.getName()));
+            tvs[1].setText("作者:" + getString(book.getAuthor()));
+            tvs[2].setText("价格:" + book.getPrice());
+            tvs[3].setText("出售者:" + getString(book.getSaler()));
+            tvs[4].setText("电话号码:" + getString(book.getPhoneNumber()));
+            tvs[5].setText("qq:" + getString(book.getQq()));
             return v;
+        }
+
+        private String getString(String s) {
+            if (s == null || TextUtils.isEmpty(s))
+                return "";
+            return s;
         }
 
 //        private void setButton() {

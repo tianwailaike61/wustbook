@@ -3,6 +3,8 @@ package com.edu.wustbook.Model;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.text.TextUtils;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,17 +66,31 @@ public class BookDBManager {
             return true;
     }
 
+    public Book searchById(int id) {
+        SQLiteDatabase db = helper.getReadableDatabase();
+        StringBuilder sql = new StringBuilder("select * from book where id=" + id);
+        Cursor c = db.rawQuery(sql.toString(), null);
+        if (c == null) {
+            db.close();
+            return null;
+        } else {
+            while (c.moveToNext()) {
+                return getBook(c);
+            }
+            c.close();
+            db.close();
+            return null;
+        }
+    }
+
     public List<Book> search(Book book) {
         SQLiteDatabase db = helper.getReadableDatabase();
         StringBuilder sql = new StringBuilder("select * from book where ");
-        for (Map.Entry<String, Object> item : book.toContentValues().valueSet()) {
-            Object value = item.getValue();
-            sql.append(item.getKey() + "='" + value + "' and ");
-        }
-        if (sql.toString().endsWith("where"))
+        String s = getParam(book);
+        if (TextUtils.isEmpty(s))
             sql.delete(sql.length() - 6, sql.length());
-        else
-            sql.delete(sql.length() - 4, sql.length());
+        sql.append(s);
+        Log.e("jhk","----"+sql);
         Cursor c = db.rawQuery(sql.toString(), null);
         if (c == null) {
             db.close();
@@ -90,6 +106,23 @@ public class BookDBManager {
             return books;
         }
     }
+
+    private String getParam(Book book) {
+        StringBuffer sb = new StringBuffer();
+        for (Map.Entry<String, Object> item : book.toContentValues().valueSet()) {
+            Object valueObj = item.getValue();
+            if (valueObj instanceof String)
+                sb.append(item.getKey() + "='" + valueObj + "' and ");
+            else {
+                String value = valueObj.toString().replace("'", "");
+                sb.append(item.getKey() + "=" + valueObj + " and ");
+            }
+        }
+        if (!TextUtils.isEmpty(sb.toString()))
+            sb.delete(sb.length() - 4, sb.length());
+        return sb.toString();
+    }
+
 
     public List<Book> search(String selection) {
         SQLiteDatabase db = helper.getReadableDatabase();
@@ -140,11 +173,9 @@ public class BookDBManager {
     }
 
     public boolean delete(Book book) {
-        List<Book> books = search(book);
+        Book b = searchById(book.getId());
         boolean flag = false;
-        for (Book b : books) {
-            flag = delete(b.getId());
-        }
+        flag = delete(b.getId());
         return flag;
     }
 
@@ -164,9 +195,6 @@ public class BookDBManager {
         s = c.getString(c.getColumnIndex("publisher"));
         if (s != null && !"".equals(s))
             book.setPublisher(s);
-        s = c.getString(c.getColumnIndex("publisher"));
-        if (s != null && !"".equals(s))
-            book.setPublisher(s);
         book.setType(c.getInt(c.getColumnIndex("type")));
         s = c.getString(c.getColumnIndex("callNo"));
         if (s != null && !"".equals(s))
@@ -178,6 +206,16 @@ public class BookDBManager {
         s = c.getString(c.getColumnIndex("icoPath"));
         if (s != null && !"".equals(s))
             book.setIconPath(s);
+
+        s = c.getString(c.getColumnIndex("saler"));
+        if (s != null && !"".equals(s))
+            book.setSaler(s);
+        s = c.getString(c.getColumnIndex("phoneNumber"));
+        if (s != null && !"".equals(s))
+            book.setPhoneNumber(s);
+        s = c.getString(c.getColumnIndex("qq"));
+        if (s != null && !"".equals(s))
+            book.setQq(s);
 
         book.setState(c.getInt(c.getColumnIndex("state")));
 

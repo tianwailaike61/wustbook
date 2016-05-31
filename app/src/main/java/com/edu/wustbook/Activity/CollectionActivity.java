@@ -2,16 +2,21 @@ package com.edu.wustbook.Activity;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.AppCompatActivity;
+import android.graphics.Canvas;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
 import android.view.View;
 
 import com.edu.wustbook.Model.Book;
 import com.edu.wustbook.Model.BookDBManager;
+import com.edu.wustbook.Model.DragListener;
 import com.edu.wustbook.Model.ItemClickListener;
+import com.edu.wustbook.Model.ItemTouchHelperCallback;
 import com.edu.wustbook.Model.RecyclerViewAdapter;
 import com.edu.wustbook.R;
 import com.edu.wustbook.Tool.BindView;
@@ -32,7 +37,8 @@ public class CollectionActivity extends AppCompatActivity implements ItemClickLi
 
     private List<Book> books;
 
-    private boolean isLoadingMore=false;
+    private boolean isLoadingMore = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +46,6 @@ public class CollectionActivity extends AppCompatActivity implements ItemClickLi
         setContentView(R.layout.activity_collection);
         context = CollectionActivity.this;
         ViewUtils.autoInjectAllFiled(this);
-
     }
 
     @Override
@@ -55,26 +60,55 @@ public class CollectionActivity extends AppCompatActivity implements ItemClickLi
         for (Book book : books) {
             Map<String, Object> map = new HashMap<>();
             map = new HashMap<String, Object>();
-            //map.put("bookcover", IMGUtils.getPicture(context, R.drawable.gaoshu2));
-            map.put("bookname", "name:" + book.getName());
-            map.put("bookauthor", "author:" + book.getAuthor());
-            map.put("bookprice", "");
-            map.put("flag", "libary");
+            map.put("bookname", book.getName());
+            map.put("bookauthor", book.getAuthor());
+            map.put("bookprice", book.getPrice());
             data.add(map);
         }
         adapter = new RecyclerViewAdapter(context, data);
         adapter.setItemClickListener(this);
-        final LinearLayoutManager layoutManager= new LinearLayoutManager(getApplicationContext());
+        final LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
+        booklist.setHasFixedSize(true);
+        booklist.setItemAnimator(new DefaultItemAnimator());
         booklist.setLayoutManager(layoutManager);
         booklist.setAdapter(adapter);
+
+        ItemTouchHelper.Callback mCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT | ItemTouchHelper.LEFT) {
+
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                int position = viewHolder.getPosition();
+                BookDBManager.getInstance(context).delete(books.get(position).getId());
+                adapter.deleteDate(position);
+            }
+
+            @Override
+            public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    //滑动时改变Item的透明度
+                    final float alpha = 1 - Math.abs(dX) /
+                            (float) viewHolder.itemView.getWidth();
+                    viewHolder.itemView.setAlpha(alpha);
+                    viewHolder.itemView.setTranslationX(dX);
+                }
+            }
+        };
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(mCallback);
+        itemTouchHelper.attachToRecyclerView(booklist);
 
         booklist.setOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                int lastVisibleItem=layoutManager.findLastVisibleItemPosition();
-                int totalItemCount=layoutManager.getItemCount();
-                if(lastVisibleItem>=totalItemCount-2 && dy>0){
-                    if(!isLoadingMore){
+                int lastVisibleItem = layoutManager.findLastVisibleItemPosition();
+                int totalItemCount = layoutManager.getItemCount();
+                if (lastVisibleItem >= totalItemCount - 2 && dy > 0) {
+                    if (!isLoadingMore) {
                         loadMore();
                     }
                 }
@@ -82,7 +116,7 @@ public class CollectionActivity extends AppCompatActivity implements ItemClickLi
         });
     }
 
-    private void loadMore(){
+    private void loadMore() {
 
     }
 
@@ -90,14 +124,10 @@ public class CollectionActivity extends AppCompatActivity implements ItemClickLi
     public void onItemClick(View view, int postion) {
         Intent intent = new Intent(getApplicationContext(), BookDetailActivity.class);
         Book book = books.get(postion);
-        if (book.getType() == Book.LIBARY) {
-            intent.putExtra("type", "libary");
-            intent.putExtra("url", books.get(postion).getUrl());
-        } else if (book.getType() == Book.BOOKSTORE) {
-            intent.putExtra("type", "bookstore");
-            //intent.putExtra("url", getString(R.string.libaryBaseUrl) + books.get(postion).getUrl());
-        }
-        intent.putExtra("collect", true);
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("book", book);
+        intent.putExtras(bundle);
+        intent.putExtra("collected", true);
         startActivity(intent);
     }
 

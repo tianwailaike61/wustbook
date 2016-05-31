@@ -8,6 +8,7 @@ import android.os.Message;
 import android.util.Log;
 
 import com.edu.wustbook.Model.Book;
+import com.edu.wustbook.R;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -36,11 +37,11 @@ public class SearchTask extends AsyncTask<ContentValues, Integer, List<Book>> {
     private String cookie;
     private int Type;
 
+    private int pageSize;
+
     private Handler handler;
 
-
     private HttpConnection httpConnection;
-
 
     public SearchTask(String url, int Type, Handler handler) {
         this.urlStr = url;
@@ -60,6 +61,9 @@ public class SearchTask extends AsyncTask<ContentValues, Integer, List<Book>> {
         Message message = Message.obtain();
         message.what = httpConnection.getConnState();
         message.obj = books;
+        if (Type == LIBARY) {
+            message.arg1 = pageSize;
+        }
         handler.sendMessage(message);
         httpConnection.close();
     }
@@ -73,12 +77,6 @@ public class SearchTask extends AsyncTask<ContentValues, Integer, List<Book>> {
         if (cookie != null)
             httpConnection.setCookie(cookie);
         if (httpConnection.open() != null) {
-//            String html;
-//            if (Type != PUSH || Type==BOOKSTORE)
-//                html = ConversionUtils.inputStreamToString(httpConnection.getInputStream());
-//            else
-//                html = ConversionUtils.inputStreamToString(httpConnection.getInputStream(), "GB2312");
-            // httpConnection.close();
             if (Type == LIBARY)
                 return libarySearch();
             if (Type == BOOKSTORE)
@@ -124,37 +122,8 @@ public class SearchTask extends AsyncTask<ContentValues, Integer, List<Book>> {
 
 
     private List<Book> bookStoreSearch() {
-//        try {
-//            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(httpConnection.getInputStream(), "UTF-8"));
-//            StringBuffer html = new StringBuffer();
-//            String s = null;
-//            while ((s = bufferedReader.readLine()) != null) {
-//                html.append(s);
-//            }
-            String html =ConversionUtils.inputStreamToString(httpConnection.getInputStream(),"gb2312");
-            return JsonUtils.getBooks(html.toString());
-//        } catch (UnsupportedEncodingException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        return null;
-    }
-
-    private void writeToFile(String s) {
-        String filePath = Environment.getExternalStorageDirectory().getAbsolutePath().toString() + "/Search.txt";
-        try {
-            File file = new File(filePath);
-            if (!file.exists())
-                file.createNewFile();
-            PrintStream ps = new PrintStream(new FileOutputStream(file));
-            ps.println(s);// 往文件里写入字符串
-            ps.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        String html = ConversionUtils.inputStreamToString(httpConnection.getInputStream(), "gb2312");
+        return JsonUtils.getBooks(html.toString());
     }
 
     private List<Book> myLibarySearch() {
@@ -185,23 +154,27 @@ public class SearchTask extends AsyncTask<ContentValues, Integer, List<Book>> {
         if (html != null) {
             books = new ArrayList<Book>();
             Document document = Jsoup.parse(html);
-            Elements elements = document.select("li.book_list_info");
-            for (Element element : elements) {
-                Elements elements1 = element.select("h3");
-
-                Book book = new Book();
-                String bookName = elements1.select("a").text().trim();
-                book.setName(bookName);
-                String docType = elements1.select("span").text().trim();
-                book.setDocType(docType);
-                book.setCallNo(elements1.text().trim().replace(bookName, "").replace(docType, "").trim());
-                book.setUrl(elements1.select("a[href]").attr("href").trim());
-                elements1.clear();
-                String[] ss = element.select("p").text().trim().split(" ");
-                book.setAuthor(ss[3]);
-                book.setPublisher(ss[4]);
-                book.setType(Book.LIBARY);
-                books.add(book);
+            Elements elements = document.select("span.pagination font");
+            if (elements != null && elements.size() > 1) {
+                pageSize = Integer.parseInt(elements.get(1).text());
+                elements.clear();
+                elements = document.select("li.book_list_info");
+                for (Element element : elements) {
+                    Elements elements1 = element.select("h3");
+                    Book book = new Book();
+                    String bookName = elements1.select("a").text().trim();
+                    book.setName(bookName);
+                    String docType = elements1.select("span").text().trim();
+                    book.setDocType(docType);
+                    book.setCallNo(elements1.text().trim().replace(bookName, "").replace(docType, "").trim());
+                    book.setUrl(elements1.select("a[href]").attr("href").trim());
+                    elements1.clear();
+                    String[] ss = element.select("p").text().trim().split(" ");
+                    book.setAuthor(ss[3]);
+                    book.setPublisher(ss[4]);
+                    book.setType(Book.LIBARY);
+                    books.add(book);
+                }
             }
         }
         return books;
